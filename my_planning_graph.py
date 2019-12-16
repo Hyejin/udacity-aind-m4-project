@@ -20,7 +20,12 @@ class ActionLayer(BaseActionLayer):
         layers.ActionNode
         """
         # TODO: implement this function
-        raise NotImplementedError
+        for effect_A in self.children[actionA]:
+            for effect_B in self.children[actionB]:
+                # print(f'{actionA} : {effect_A} / {actionB} : {effect_B}')
+                if effect_A == ~effect_B or ~effect_A == effect_B: # or 없이 하나만 해도 되지 않나?
+                    return True
+        return False
 
 
     def _interference(self, actionA, actionB):
@@ -35,7 +40,17 @@ class ActionLayer(BaseActionLayer):
         layers.ActionNode
         """
         # TODO: implement this function
-        raise NotImplementedError
+        for effect_A in self.children[actionA]:
+            for precond_B in self.parents[actionB]:
+                if effect_A == ~precond_B or ~effect_A == precond_B:
+                    return True
+        
+        for effect_B in self.children[actionB]:
+            for precond_A in self.parents[actionA]:
+                if effect_B == ~precond_A or ~effect_B == precond_A:
+                    return True
+            
+        return False
 
     def _competing_needs(self, actionA, actionB):
         """ Return True if any preconditions of the two actions are pairwise mutex in the parent layer
@@ -50,7 +65,15 @@ class ActionLayer(BaseActionLayer):
         layers.BaseLayer.parent_layer
         """
         # TODO: implement this function
-        raise NotImplementedError
+        preconds_A = self.parents.get(actionA)
+        preconds_B = self.parents.get(actionB)
+        res = False
+        for preA in preconds_A:
+            for preB in preconds_B:
+                if self.parent_layer.is_mutex(preA, preB):
+                    res = True
+                    break
+        return res
 
 
 class LiteralLayer(BaseLiteralLayer):
@@ -67,12 +90,24 @@ class LiteralLayer(BaseLiteralLayer):
         layers.BaseLayer.parent_layer
         """
         # TODO: implement this function
-        raise NotImplementedError
+        actions_A = self.parents.get(literalA)
+        actions_B = self.parents.get(literalB)
+
+        for actB in actions_B:
+            if len(self.parent_layer._mutexes.get(actB, set()) & actions_A) != len(actions_A):
+                return False
+
+        for actA in actions_A:
+            if len(self.parent_layer._mutexes.get(actA, set()) & actions_B) != len(actions_B):
+                return False
+        return True
 
     def _negation(self, literalA, literalB):
         """ Return True if two literals are negations of each other """
         # TODO: implement this function
-        raise NotImplementedError
+        copy_litA = literalA if literalA.op != '~' else ~literalA
+        copy_litB = literalB if literalB.op != '~' else ~literalB
+        return copy_litA == copy_litB
 
 
 class PlanningGraph:
